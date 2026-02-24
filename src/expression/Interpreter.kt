@@ -1,6 +1,6 @@
 package expression
 
-import expression.BinaryExpression.Operator.*
+import expression.BinaryExpression.BinaryOperator.*
 
 class Interpreter {
     val variables = mutableMapOf<String, ASTNode>()
@@ -38,7 +38,6 @@ class Interpreter {
                MULTIPLY -> TODO()
                DIVIDE -> TODO()
                CONCAT -> TODO()
-               INDEX -> TODO()
            }
         }
     }

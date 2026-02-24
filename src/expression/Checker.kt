@@ -1,17 +1,23 @@
 package expression
 
-import expression.BinaryExpression.Operator.*
+import expression.BinaryExpression.BinaryOperator.*
+import expression.UnaryExpression.UnaryOperator.*
 
 
 enum class LanguageType {
-    INT, DOUBLE, STRING, TUPLE, UNIT, BOOL, INVALID
+    INT, DOUBLE, STRING, TUPLE, UNIT, BOOL, INVALID,
 }
 
 
+//TODO
+/*
+    Type should be an extension property
+    Environment should be a delegate
+ */
 
 // Probably should be an interface!
 class TypeChecker {
-    val variables = mutableMapOf<String, Pair<ASTNode, LanguageType>>()
+    val variables = mutableMapOf<String, LanguageType>()
 
     internal fun ASTNode.type(): LanguageType =
         when (this) {
@@ -23,8 +29,14 @@ class TypeChecker {
             is FunctionNode -> next?.type() ?: current.type()
             is BinaryExpression -> type()
             is VariableAssignment -> LanguageType.UNIT
-            is VariableReference -> variables[name]?.second ?: LanguageType.INVALID
+            is VariableReference -> variables[name] ?: LanguageType.INVALID
             is DoubleConstant -> LanguageType.DOUBLE
+            is UnaryExpression -> type()
+        }
+
+    internal fun UnaryExpression.type(): LanguageType =
+        when (operator) {
+            NOT -> node.type()
         }
 
     internal fun BinaryExpression.type(): LanguageType =
@@ -37,79 +49,50 @@ class TypeChecker {
             MINUS,
             MULTIPLY,
             DIVIDE
+                -> when (val l = left.type() to right.type()) {
+                    LanguageType.INT to LanguageType.INT -> LanguageType.INT
+                    LanguageType.INT to LanguageType.DOUBLE -> LanguageType.DOUBLE
+                    LanguageType.DOUBLE to LanguageType.INT -> LanguageType.DOUBLE
+                    LanguageType.DOUBLE to LanguageType.DOUBLE -> LanguageType.DOUBLE
+                    else -> throwTypeMismatch(this, LanguageType.NUMERIC, left.type())
+                }
+
+            EQ,
+            NEQ,
                 ->
-                    when (left.type() to right.type()) {
-                        LanguageType.INT to LanguageType.INT -> LanguageType.INT
-                        else -> LanguageType.DOUBLE
-                    }
+                    if (left.type() == right.type())
+                        LanguageType.BOOL
+                    else
+                        LanguageType.INVALID
+            LT,
+            GT,
+            LTE,
+            GTE -> when (val l = left.type() to right.type()) {
+                LanguageType.INT to LanguageType.DOUBLE,
+                LanguageType.DOUBLE to LanguageType.INT -> LanguageType.BOOL
+                else if (l.first == l.second) -> LanguageType.BOOL
+                else -> LanguageType.INVALID
+            }
 
-            INDEX
-                if (left.type() == LanguageType.TUPLE && right.type() == LanguageType.INT)
-                    -> {
-                        val rawTuple = (left as TupleConstant).value
-                        val rawIndex = (right as IntegerConstant).value
-                        rawTuple[rawIndex].type()
-                    }
-
-            else -> LanguageType.INVALID
+            AND,
+            OR ->
+                if (left.type() == LanguageType.BOOL && right.type() == LanguageType.BOOL)
+                    LanguageType.BOOL
+                else
+                    LanguageType.INVALID
         }
 
-
+    internal fun throwTypeMismatch(expected: LanguageType, received: LanguageType): Nothing {
+        throw IllegalStateException("Expected type $expected, received type: $received in node $this")
+    }
 
     fun visit(node: ASTNode) {
-        with (node) {
-            when (this) {
-                is Constant -> return
-                is FunctionNode -> {
-                    visit(current)
-                    visit(next ?: return)
-                }
-                is VariableAssignment -> variables[name] = value
-                is VariableReference -> checkVariable(name)
-                is BinaryExpression -> {
-                    checkBinaryExpression(this)
-                    visit(left)
-                    visit(right)
-                }
-            }
-        }
-    }
-
-    private fun checkBinaryExpression(node: BinaryExpression) {
-        with (node) {
-            when (operator) {
-                PLUS,
-                MINUS,
-                MULTIPLY,
-                DIVIDE
-                    -> with (node.left) {
-                        when (this) {
-                            is BinaryExpression -> checkBinaryExpression(this)
-                        }
-                    }
-                CONCAT
-                    -> checkBinaryOperator<StringConstant, StringConstant>(this)
-
-                INDEX
-                    -> checkBinaryOperator<TupleConstant, IntegerConstant>(this)
-            }
+        if (node.type() == LanguageType.INVALID) {
+            throw IllegalStateException("Node type is invalid!")
         }
 
+        if (node is FunctionNode) visit(node.next ?: return)
     }
-
-    private inline fun <reified T> shallowTypeCheck(node: ASTNode) =
-        require((node is T) || (node is VariableReference && variables[node.name] is T))
-
-    private inline fun <reified T, reified U> checkBinaryOperator(node: BinaryExpression) {
-        shallowTypeCheck<T>(node.left)
-        shallowTypeCheck<U>(node.right)
-        if (node.left is OperatorNode) {
-
-        }
-    }
-
-    private fun checkVariable(name: String) =
-        variables[name] ?: throw IllegalStateException("Variable with name $name does not exist")
 
 }
 

@@ -22,16 +22,28 @@ data class TupleConstant(val value: List<ASTNode>): Constant
 data class FunctionNode(val current: ASTNode, val next: ASTNode?): ASTNode
 
 // Operators
+data class UnaryExpression(
+    val node: ASTNode,
+    val operator: UnaryOperator
+) : OperatorNode {
+    enum class UnaryOperator {
+        NOT
+    }
+}
 
 data class BinaryExpression(
     val left: ASTNode,
     val right: ASTNode,
-    val operator: Operator
+    val operator: BinaryOperator
 ) : OperatorNode {
-    enum class Operator {
-        PLUS, MINUS, MULTIPLY, DIVIDE, INDEX
+    enum class BinaryOperator {
+        PLUS, MINUS, MULTIPLY, DIVIDE,
+        EQ, NEQ, LT, GT, LTE, GTE,
+        AND, OR
     }
 }
+
+
 
 // Variables
 data class VariableAssignment(val name: String, val value: ASTNode): ASTNode
