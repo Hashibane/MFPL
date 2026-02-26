@@ -1,30 +1,21 @@
 package environment
-/*
-import compiling.exceptions.VariableException
-import expression.expression.IExpression
 
-class Environment(val parent: Environment?) {
-    private val environment: MutableMap<String, IExpression> = mutableMapOf()
+import kotlin.collections.contains
+import kotlin.collections.set
 
-    fun create(variableName: String, value: IExpression) {
-        environment[variableName] = value
+data class Environment<T>(val parent: Environment<T>? = null, val environment: MutableMap<String, T> = mutableMapOf())
+
+operator fun <T> Environment<T>?.contains(variableName: String): Boolean =
+    if (this == null) false
+    else parent.contains(variableName)
+
+operator fun <T> Environment<T>?.set(variableName: String, value: T) {
+    when (this) {
+        null -> return
+        else if variableName in environment -> environment[variableName] = value
+        else -> environment[variableName] = value
     }
-
-    fun get(variableName: String): IExpression =
-        environment[variableName] ?:
-        parent?.get(variableName) ?:
-        throw VariableException("Variable $variableName does not exist")
-
-
-    fun set(variableName: String, value: IExpression) {
-        if (variableName in environment) {
-            environment[variableName] = value
-        } else {
-            parent?.set(variableName, value) ?:
-            throw VariableException("Variable $variableName does not exist")
-        }
-    }
-
-
 }
-*/
+
+operator fun <T> Environment<T>.get(variableName: String): T? =
+    environment[variableName] ?: parent?.get(variableName)

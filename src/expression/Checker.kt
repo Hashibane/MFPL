@@ -1,97 +1,138 @@
 package expression
 
+import environment.*
+import expression.TernaryExpression.TernaryOperator.*
 import expression.BinaryExpression.BinaryOperator.*
 import expression.UnaryExpression.UnaryOperator.*
 
 
-enum class LanguageType {
-    INT, DOUBLE, STRING, TUPLE, UNIT, BOOL, INVALID,
+private sealed interface LanguageType {
+    data object INT : LanguageType
+    data object DOUBLE : LanguageType
+    data object STRING : LanguageType
+    data object TUPLE : LanguageType
+    data object UNIT : LanguageType
+    data object BOOL : LanguageType
+    data class FUNCTION(val arguments: List<LanguageType>, val node: ASTNode) : LanguageType
+
+    data class INVALID(val message: String, val node: ASTNode) : LanguageType {
+        companion object {
+            fun variableNotExist(variableName: String, node: ASTNode) =
+                INVALID("Variable \"$variableName\" does not exist", node)
+
+            fun typeMismatch(prefix: String, types: List<LanguageType>, node: ASTNode) =
+                INVALID("$prefix, received types ${types.joinToString()}", node)
+
+            fun typeMismatch(expectedTypes: List<LanguageType>, receivedTypes: List<LanguageType>, node: ASTNode) =
+                INVALID("Expected types: " +
+                        "${expectedTypes.joinToString()}, received ${receivedTypes.joinToString()}", node)
+        }
+    }
 }
 
 
-//TODO
-/*
-    Type should be an extension property
-    Environment should be a delegate
- */
-
-// Probably should be an interface!
 class TypeChecker {
-    val variables = mutableMapOf<String, LanguageType>()
+    private val environment = Environment<LanguageType>()
 
-    internal fun ASTNode.type(): LanguageType =
-        when (this) {
-            is IntegerConstant -> LanguageType.INT
-            is BoolConstant -> LanguageType.BOOL
-            is StringConstant -> LanguageType.STRING
-            is TupleConstant -> LanguageType.TUPLE
-            UnitConstant -> LanguageType.UNIT
-            is FunctionNode -> next?.type() ?: current.type()
-            is BinaryExpression -> type()
-            is VariableAssignment -> LanguageType.UNIT
-            is VariableReference -> variables[name] ?: LanguageType.INVALID
-            is DoubleConstant -> LanguageType.DOUBLE
-            is UnaryExpression -> type()
+    private fun ASTNode.getType(environment: Environment<LanguageType>): LanguageType = when (this) {
+        is IntegerConstant -> LanguageType.INT
+        is BoolConstant -> LanguageType.BOOL
+        is StringConstant -> LanguageType.STRING
+        is TupleConstant -> LanguageType.TUPLE
+        UnitConstant -> LanguageType.UNIT
+        is FunctionNode -> next?.getType(environment) ?: current.getType(environment)
+        is BinaryExpression -> getType(environment)
+        is VariableAssignment -> {
+            environment[name] = value.getType(Environment(environment))
+            LanguageType.UNIT
         }
-
-    internal fun UnaryExpression.type(): LanguageType =
-        when (operator) {
-            NOT -> node.type()
-        }
-
-    internal fun BinaryExpression.type(): LanguageType =
-        when (operator) {
-            PLUS
-                if left.type() == LanguageType.STRING && right.type() == LanguageType.STRING
-                    -> LanguageType.STRING
-
-            PLUS,
-            MINUS,
-            MULTIPLY,
-            DIVIDE
-                -> when (val l = left.type() to right.type()) {
-                    LanguageType.INT to LanguageType.INT -> LanguageType.INT
-                    LanguageType.INT to LanguageType.DOUBLE -> LanguageType.DOUBLE
-                    LanguageType.DOUBLE to LanguageType.INT -> LanguageType.DOUBLE
-                    LanguageType.DOUBLE to LanguageType.DOUBLE -> LanguageType.DOUBLE
-                    else -> throwTypeMismatch(this, LanguageType.NUMERIC, left.type())
-                }
-
-            EQ,
-            NEQ,
-                ->
-                    if (left.type() == right.type())
-                        LanguageType.BOOL
-                    else
-                        LanguageType.INVALID
-            LT,
-            GT,
-            LTE,
-            GTE -> when (val l = left.type() to right.type()) {
-                LanguageType.INT to LanguageType.DOUBLE,
-                LanguageType.DOUBLE to LanguageType.INT -> LanguageType.BOOL
-                else if (l.first == l.second) -> LanguageType.BOOL
-                else -> LanguageType.INVALID
-            }
-
-            AND,
-            OR ->
-                if (left.type() == LanguageType.BOOL && right.type() == LanguageType.BOOL)
-                    LanguageType.BOOL
-                else
-                    LanguageType.INVALID
-        }
-
-    internal fun throwTypeMismatch(expected: LanguageType, received: LanguageType): Nothing {
-        throw IllegalStateException("Expected type $expected, received type: $received in node $this")
+        is VariableReference ->
+            environment[name] ?: LanguageType.INVALID.variableNotExist(name, this)
+        is DoubleConstant -> LanguageType.DOUBLE
+        is UnaryExpression -> getType(environment)
+        is TernaryExpression -> getType(environment)
     }
 
-    fun visit(node: ASTNode) {
-        if (node.type() == LanguageType.INVALID) {
-            throw IllegalStateException("Node type is invalid!")
+    private fun UnaryExpression.getType(environment: Environment<LanguageType>): LanguageType = when (operator) {
+        NOT -> node.getType(environment)
+    }
+
+    private fun BinaryExpression.getType(environment: Environment<LanguageType>): LanguageType = when (operator) {
+        PLUS
+            if left.getType(environment) == LanguageType.STRING && right.getType(environment) == LanguageType.STRING
+                -> LanguageType.STRING
+
+        PLUS,
+        MINUS,
+        MULTIPLY,
+        DIVIDE -> when (val l = left.getType(environment) to right.getType(environment)) {
+            LanguageType.INT to LanguageType.INT -> LanguageType.INT
+            LanguageType.INT to LanguageType.DOUBLE -> LanguageType.DOUBLE
+            LanguageType.DOUBLE to LanguageType.INT -> LanguageType.DOUBLE
+            LanguageType.DOUBLE to LanguageType.DOUBLE -> LanguageType.DOUBLE
+            else -> LanguageType.INVALID.typeMismatch("Expected types must be numeric", l.toList(), this)
         }
 
-        if (node is FunctionNode) visit(node.next ?: return)
+        EQ,
+        NEQ -> {
+            val leftType = left.getType(environment)
+            val rightType = right.getType(environment)
+            if (leftType == rightType) {
+                LanguageType.BOOL
+            } else {
+                LanguageType.INVALID.typeMismatch(
+                    "Expected types to be the same", listOf(rightType, leftType), this)
+            }
+        }
+
+        LT,
+        GT,
+        LTE,
+        GTE -> when (val l = left.getType(environment) to right.getType(environment)) {
+            LanguageType.INT to LanguageType.DOUBLE,
+            LanguageType.DOUBLE to LanguageType.INT -> LanguageType.BOOL
+            else if (l.first == l.second) -> LanguageType.BOOL
+            else -> LanguageType.INVALID.typeMismatch("Expected types must be numeric or same",
+                l.toList(), this)
+        }
+
+        AND,
+        OR -> when (val l = left.getType(environment) to right.getType(environment)) {
+            LanguageType.BOOL to LanguageType.BOOL -> LanguageType.BOOL
+            else -> LanguageType.INVALID.typeMismatch(listOf(LanguageType.BOOL,
+                LanguageType.BOOL), l.toList(), this)
+        }
+
+    }
+
+    private fun TernaryExpression.getType(environment: Environment<LanguageType>): LanguageType = when (operator) {
+        IF -> {
+            val typeCond = condition.getType(environment)
+            if (typeCond !is LanguageType.BOOL) {
+                LanguageType.INVALID.typeMismatch(
+                    listOf(LanguageType.BOOL), listOf(typeCond), this)
+            } else {
+                // similar code as in BinaryOperator EQ, but not really worth refactor
+                val leftType = left.getType(environment)
+                val rightType = right.getType(environment)
+                if (leftType == rightType) {
+                    leftType
+                } else {
+                    LanguageType.INVALID.typeMismatch(
+                        "Expected types to be the same", listOf(rightType, leftType), this)
+                }
+            }
+        }
+    }
+
+
+    fun checkProgram(nodes: List<ASTNode>) {
+        for (n in nodes) {
+            val t = n.getType(environment)
+            if (t is LanguageType.INVALID) {
+                throw IllegalStateException("${t.message}, on node $t")
+            }
+        }
     }
 
 }
