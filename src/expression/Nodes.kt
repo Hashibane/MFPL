@@ -16,8 +16,8 @@ data class DoubleConstant(val value: Double): ASTNode
 data class TupleConstant(val value: List<ASTNode>): ASTNode
 
 // Functions
-data class FunctionSignature(val typeIdentifiers: List<String>): ASTNode
-data class FunctionCall(val node: ASTNode, val arguments: List<ASTNode>): ASTNode
+data class FunctionDefinition(val arguments: List<Pair<String, LanguageType>>, val node: ASTNode): ASTNode
+data class FunctionCall(val definition: ASTNode, val parameters: List<ASTNode>): ASTNode
 data class FunctionNode(val current: ASTNode, val next: ASTNode?): ASTNode
 
 // Maybe a typealias node would be cool?
