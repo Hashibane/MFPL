@@ -1,6 +1,5 @@
 
 import expression.*
-import expression.BinaryExpression.*
 import expression.BinaryExpression.BinaryOperator.*
 import expression.TernaryExpression.TernaryOperator.*
 
@@ -10,6 +9,7 @@ fun main() {
         VariableAssignment("fibonacci",
             FunctionDefinition(
                 listOf("n" to LanguageType.INT),
+                LanguageType.INT,
                 TernaryExpression(
                     condition = BinaryExpression(
                         left = VariableReference("n"),
@@ -48,6 +48,8 @@ fun main() {
         FunctionCall(VariableReference("fibonacci"), listOf(IntegerConstant(4)))
     )
 
-    t.checkProgram(program)
+    if(t.isCorrect(program)) {
+        println("All OK!")
+    }
 }
 

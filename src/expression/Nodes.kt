@@ -16,7 +16,7 @@ data class DoubleConstant(val value: Double): ASTNode
 data class TupleConstant(val value: List<ASTNode>): ASTNode
 
 // Functions
-data class FunctionDefinition(val arguments: List<Pair<String, LanguageType>>, val node: ASTNode): ASTNode
+data class FunctionDefinition(val arguments: List<Pair<String, LanguageType>>, val returnType: LanguageType, val node: ASTNode): ASTNode
 data class FunctionCall(val definition: ASTNode, val parameters: List<ASTNode>): ASTNode
 data class FunctionNode(val current: ASTNode, val next: ASTNode?): ASTNode
 

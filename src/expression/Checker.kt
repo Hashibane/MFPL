@@ -19,8 +19,19 @@ class TypeChecker {
         is FunctionNode -> next?.getType(environment) ?: current.getType(environment)
         is BinaryExpression -> getType(environment)
         is VariableAssignment -> {
-            environment[name] = value.getType(Environment(environment))
-            UNIT
+            // Need special treatment, because of recursion
+            if (value is FunctionDefinition) {
+                environment[name] = FUNCTION(value.arguments.map { it.second }, value.returnType)
+                val inferredType = value.getType(environment)
+                if (environment[name] != inferredType) {
+                    return INVALID.typeMismatch(listOf(environment[name]!!), listOf(inferredType), this)
+                }
+                inferredType
+            } else {
+                environment[name] = value.getType(environment)
+                UNIT
+            }
+
         }
         is VariableReference ->
             environment[name] ?: INVALID.variableNotExist(name, this)
@@ -28,7 +39,7 @@ class TypeChecker {
         is UnaryExpression -> getType(environment)
         is TernaryExpression -> getType(environment)
         is FunctionCall -> {
-            println("Check on function call, $definition")
+
             fun resolveFunctionCall(function: FUNCTION, parameters: List<ASTNode>): LanguageType  {
                 val (inputTypes, returnType) = function
 
@@ -71,14 +82,13 @@ class TypeChecker {
     }
 
 
-    //TODO:
-    /*
-        Move body validation to function definition. We can do that, because the function can populate the environment
-        with types in its definition, hence the environment is known at the point of definition. Function call should
-        only return a result type!
-     */
-    private fun FunctionDefinition.getType(environment: Environment<LanguageType>): FUNCTION =
-        FUNCTION(arguments.map { it.second }, node.getType(environment))
+    private fun FunctionDefinition.getType(environment: Environment<LanguageType>): FUNCTION {
+        with(Environment(environment)) {
+            this@getType.arguments.forEach { this[it.first] = it.second }
+            return FUNCTION(arguments.map { it.second }, node.getType(this))
+        }
+    }
+
 
 
 
@@ -157,13 +167,18 @@ class TypeChecker {
     }
 
 
-    fun checkProgram(nodes: List<ASTNode>) {
-        for (n in nodes) {
+    fun isCorrect(program: List<ASTNode>): Boolean {
+        var toReturn = true
+
+        for (n in program) {
             val t = n.getType(environment)
             if (t is INVALID) {
                 println("${t.message}, on node $t")
+                toReturn = false
             }
         }
+
+        return toReturn
     }
 
 }
