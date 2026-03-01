@@ -5,7 +5,7 @@ import expression.TernaryExpression.TernaryOperator.*
 
 fun main() {
     val t  = TypeChecker()
-    val program = listOf<ASTNode>(
+    val program = listOf(
         VariableAssignment("fibonacci",
             FunctionDefinition(
                 listOf("n" to LanguageType.INT),
@@ -48,6 +48,8 @@ fun main() {
         FunctionCall(VariableReference("fibonacci"), listOf(IntegerConstant(4)))
     )
 
+    //note - Checker is not so smart, so if you define fibonacci(): Int = fibonacci(), then it will determine
+    //that program is valid. It sort of is...
     if(t.isCorrect(program)) {
         println("All OK!")
     }

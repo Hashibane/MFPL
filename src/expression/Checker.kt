@@ -18,13 +18,15 @@ class TypeChecker {
         UnitConstant -> UNIT
         is FunctionNode -> next?.getType(environment) ?: current.getType(environment)
         is BinaryExpression -> getType(environment)
-        is VariableAssignment -> {
+        is VariableAssignment ->
             // Need special treatment, because of recursion
             if (value is FunctionDefinition) {
-                environment[name] = FUNCTION(value.arguments.map { it.second }, value.returnType)
+                val declaredType = FUNCTION(value.arguments.map { it.second }, value.returnType)
+                environment[name] = declaredType
+
                 val inferredType = value.getType(environment)
-                if (environment[name] != inferredType) {
-                    return INVALID.typeMismatch(listOf(environment[name]!!), listOf(inferredType), this)
+                if (declaredType != inferredType) {
+                    return INVALID.typeMismatch(listOf(declaredType), listOf(inferredType), this)
                 }
                 inferredType
             } else {
@@ -32,7 +34,6 @@ class TypeChecker {
                 UNIT
             }
 
-        }
         is VariableReference ->
             environment[name] ?: INVALID.variableNotExist(name, this)
         is DoubleConstant -> DOUBLE
