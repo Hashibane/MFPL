@@ -7,7 +7,7 @@ import expression.LanguageType.*
 import expression.UnaryExpression.UnaryOperator.*
 
 
-class TypeChecker {
+open class TypeChecker {
     private val environment = Environment<LanguageType>()
 
     private fun ASTNode.getType(environment: Environment<LanguageType>): LanguageType = when (this) {
