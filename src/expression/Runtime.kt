@@ -142,5 +142,5 @@ data class TupleObject(val values: List<RuntimeObject>): RuntimeObject {
     //TODO
     //implement tuple operations
 }
-data class FunctionObject(val node: ASTNode, val closure: Environment<RuntimeObject>): RuntimeObject
+data class FunctionObject(val node: ASTNode, val closure: Environment<RuntimeObject>, val argsNeeded: List<String>): RuntimeObject
 data class ExceptionObject(val message: String): RuntimeObject

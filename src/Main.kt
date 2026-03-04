@@ -52,6 +52,9 @@ fun main() {
     //that program is valid. It sort of is...
     if(t.isCorrect(program)) {
         println("All OK!")
+        val interpreter = Interpreter()
+        println("--- starting program ---")
+        interpreter.runProgram(program)
     }
 }
 
