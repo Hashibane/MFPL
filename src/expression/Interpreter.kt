@@ -12,8 +12,8 @@ class Interpreter {
     private val environment = Environment<RuntimeObject>()
 
     fun ASTNode.getValue(environment: Environment<RuntimeObject>): RuntimeObject {
-        print("$this")
-        return when (this) {
+
+        val toReturn = when (this) {
             is BinaryExpression ->
                 createPrimitiveObject(
                     when (operator) {
@@ -41,11 +41,10 @@ class Interpreter {
                         return ExceptionObject("$function was called with more arguments than defined. Args: $parameters")
                     }
 
-                    with (function.closure) {
+                    with (Environment(function.closure)) {
                         function.argsNeeded.zip(parameters).forEach { this[it.first] = it.second }
-
                         return if (argDiff > 0)
-                            FunctionObject(function.node, Environment(this), function.argsNeeded.drop(parameters.size))
+                            FunctionObject(function.node, this, function.argsNeeded.drop(parameters.size))
                         else
                             function.node.getValue(this)
                     }
@@ -101,6 +100,8 @@ class Interpreter {
             }
             is VariableReference -> environment[name] ?: ExceptionObject("Variable $name does not exist")
         }
+
+        return toReturn
     }
 
     private fun FunctionDefinition.getValue(environment: Environment<RuntimeObject>): FunctionObject =
@@ -108,7 +109,7 @@ class Interpreter {
 
     fun runProgram(program: List<ASTNode>) {
         for (node in program) {
-            print(node.getValue(environment))
+            println(node.getValue(environment))
         }
     }
 }

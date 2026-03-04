@@ -107,8 +107,6 @@ open class TypeChecker {
         MULTIPLY,
         DIVIDE -> when (val l = left.getType(environment) to right.getType(environment)) {
             INT to INT -> INT
-            INT to DOUBLE -> DOUBLE
-            DOUBLE to INT -> DOUBLE
             DOUBLE to DOUBLE -> DOUBLE
             else -> INVALID.typeMismatch("Expected types must be numeric", l.toList(), this)
         }
@@ -128,12 +126,12 @@ open class TypeChecker {
         LT,
         GT,
         LTE,
-        GTE -> when (val l = left.getType(environment) to right.getType(environment)) {
-            INT to DOUBLE,
-            DOUBLE to INT -> BOOL
-            else if (l.first == l.second) -> BOOL
-            else -> INVALID.typeMismatch("Expected types must be numeric or same",
-                l.toList(), this)
+        GTE -> {
+            val l = left.getType(environment) to right.getType(environment)
+            if (l.first == l.second)
+                BOOL
+            else
+                INVALID.typeMismatch("Expected types must be numeric or same", l.toList(), this)
         }
 
         AND,
