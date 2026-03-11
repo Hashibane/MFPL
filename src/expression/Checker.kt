@@ -28,7 +28,7 @@ open class TypeChecker {
                 if (declaredType != inferredType) {
                     return INVALID.typeMismatch(listOf(declaredType), listOf(inferredType), this)
                 }
-                inferredType
+                UNIT
             } else {
                 environment[name] = value.getType(environment)
                 UNIT
