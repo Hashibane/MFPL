@@ -157,7 +157,7 @@ Let's consider more complex example:
 val a = 5
 val b = 3
 val c = 3
-fun b(a: Int): Int = {
+fun b(a: Int) -> Int = {
     val d = 3
     a + c
 } 
@@ -257,7 +257,7 @@ The functions are implemented by using a FunctionNode. A FunctionNode is a node,
 For example the function:
 
 ```
-fun f(): Int = {
+fun f() -> Int = {
         val a = 5
         val b = a + 1
         b

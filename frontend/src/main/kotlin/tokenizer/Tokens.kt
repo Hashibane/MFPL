@@ -7,7 +7,7 @@ sealed interface Token {
         fun parseToken(text: String): Token? {
             return LanguageToken.lookupTable[text] ?:
                 when {
-                    text.contains("^[a-zA-Z_](\\p{Alnum}|_)+\$".toRegex()) -> IDENTIFIER(text)
+                    text.contains("^[a-zA-Z_](\\p{Alnum}|_)*$".toRegex()) -> IDENTIFIER(text)
                     text.contains("^[0-9]+$".toRegex()) -> INTEGER(text)
                     text.contains("^[0-9]+\\.[0-9]*$".toRegex()) -> DOUBLE(text)
                     text.contains("^\".*\"$".toRegex()) -> STRING(text)
