@@ -3,6 +3,7 @@ import compiling.tokenizer.tokenize
 
 fun main() {
     val program = """
+        {}()
         val a = 14 + 4 + { 3 + 4 }()
         val b = "hello"
         
@@ -16,7 +17,7 @@ fun main() {
             }
             a + b 
         }
-    """.trimIndent()
+    """
 
     println(tokenize(program))
 }
